@@ -171,7 +171,6 @@ if __name__ == '__main__':
     #             if decoded.startswith('CXT'):
     #                 print(decoded)
     #                 # print(expected)
-    enigma = Enigma(rotors=['I', 'II', 'III'], reflector='Reflector B', initial_rotor_settings=[25, 25, 25], plug_board_connections=None)
+    enigma = Enigma(rotors=['I', 'II', 'III'], reflector='Reflector B', initial_rotor_settings=[0, 0, 0], plug_board_connections=None)
     decoded = enigma.encodeMessage(message=original_message)
     print(decoded)
-    print('DZG' in decoded)
