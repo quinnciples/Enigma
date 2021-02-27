@@ -93,7 +93,7 @@ class Enigma:
 
         for i in range(iterations):
             for r, rotor in reversed(list(enumerate(self.rotors))):
-                logging.debug(f'Advancing rotor {r} from {rotor} to {[rotor[0][-1] + rotor[0][:-1], rotor[1] + 1]}')
+                logging.debug(f'Advancing rotor {r} from {rotor} to {[rotor[0][1:] + rotor[0][0], rotor[1] + 1]}')
                 rotor_copy = [rotor[0][1:] + rotor[0][0], rotor[1] + 1]
                 # rotor_copy = [rotor[0][-1] + rotor[0][:-1], rotor[1] + 1]
                 self.rotors[r] = rotor_copy
@@ -118,12 +118,19 @@ class Enigma:
             # Go from right to left
             logging.debug(f"       {Enigma.ROTOR_POOL['Master']}")
             for rotor in reversed(self.rotors):
-                logging.debug(f"{encoded_value} -> {rotor[0][Enigma.ROTOR_POOL['Master'].find(encoded_value)]} {rotor[0]}")
-                encoded_value = rotor[0][Enigma.ROTOR_POOL['Master'].find(encoded_value)]
+                # Take the INDEX from the Master and look up the corresponding LETTER in the rotor
+                input_letter = encoded_value
+                rotor_input_index = Enigma.ROTOR_POOL['Master'].find(input_letter)
+                encoded_value = rotor[0][rotor_input_index]
+                rotor_output_index = Enigma.ROTOR_POOL['Master'].find(encoded_value)
+                logging.debug(f"{input_letter} ({rotor_input_index}) -> {encoded_value} ({rotor_output_index}) {rotor[0]}")
 
             # Handle reflector
-            logging.debug(f"REFLECTOR: {encoded_value} -> {self.reflector[Enigma.ROTOR_POOL['Master'].find(encoded_value)]}")
-            encoded_value = self.reflector[Enigma.ROTOR_POOL['Master'].find(encoded_value)]
+            input_letter = encoded_value
+            rotor_input_index = Enigma.ROTOR_POOL['Master'].find(input_letter)
+            encoded_value = self.reflector[rotor_input_index]
+            rotor_output_index = Enigma.ROTOR_POOL['Master'].find(encoded_value)
+            logging.debug(f"REFLECTOR: {input_letter} ({rotor_input_index}) -> {encoded_value} ({rotor_output_index}) {self.reflector}")
 
             # Go from left to right
             for rotor in self.rotors:
@@ -160,8 +167,8 @@ if __name__ == '__main__':
     # decoded = enigma.encodeMessage(original_message)
     # print(f'Decoded:  {decoded}')
     # print('Expected:', 'FEIND LIQEI NFANT ERIEK OLONN EBEOB AQTET XANFA NGSUE DAUSG ANGBA ERWAL DEXEN DEDRE IKMOS TWAER TSNEU STADT'.replace(' ', ''))
-    original_message = 'A'
-    expected = 'B'  # 'DZGOWCXLY'
+    original_message = 'G'
+    expected = 'P'  # 'BDZGO'  # 'DZGOWCXLY'
     # for x in range(26):
     #     for y in range(26):
     #         for z in range(26):
@@ -171,6 +178,6 @@ if __name__ == '__main__':
     #             if decoded.startswith('CXT'):
     #                 print(decoded)
     #                 # print(expected)
-    enigma = Enigma(rotors=['I', 'II', 'III'], reflector='Reflector B', initial_rotor_settings=[0, 0, 0], plug_board_connections=None)
+    enigma = Enigma(rotors=['I', 'II', 'III'], reflector='Reflector B', initial_rotor_settings=[25, 25, 25], plug_board_connections=None)
     decoded = enigma.encodeMessage(message=original_message)
     print(decoded)
