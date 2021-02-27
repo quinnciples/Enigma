@@ -30,6 +30,10 @@ class Enigma:
 
     def __init__(self, rotors: list, reflector: str, initial_rotor_settings: list, plug_board_connections: list = None):
         # Reference https://en.wikipedia.org/wiki/Enigma_rotor_details
+        # http://accordingtobenedict.com/wp-content/uploads/2014/04/ENIGMA-scrambling-unit-copy-2.jpg
+        # http://www.cs.cornell.edu/courses/cs3110/2020sp/a1/
+        # https://www.101computing.net/enigma-encoder/
+        # https://www.101computing.net/enigma/js/index.js
 
         self.initial_rotor_settings = initial_rotor_settings
         self.rotor_selection = rotors
@@ -156,7 +160,7 @@ if __name__ == '__main__':
     # decoded = enigma.encodeMessage(original_message)
     # print(f'Decoded:  {decoded}')
     # print('Expected:', 'FEIND LIQEI NFANT ERIEK OLONN EBEOB AQTET XANFA NGSUE DAUSG ANGBA ERWAL DEXEN DEDRE IKMOS TWAER TSNEU STADT'.replace(' ', ''))
-    original_message = 'A' 
+    original_message = 'A'
     expected = 'B'  # 'DZGOWCXLY'
     # for x in range(26):
     #     for y in range(26):
