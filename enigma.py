@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s.%(msecs)03d - %(levelname)8s - %(filename)s - Function: %(funcName)20s - Line: %(lineno)4s // %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     handlers=[
@@ -14,23 +14,23 @@ class Enigma:
     """DOC STRING"""
 
     ROTOR_POOL = {
-            'Master': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-            'I':     ['EKMFLGDQVZNTOWYHXUSPAIBRCJ', 0],
-            'II':    ['AJDKSIRUXBLHWTMCQGZNPYFVOE', 0],
-            'III':   ['BDFHJLCPRTXVZNYEIWGAKMUSQO', 0],
-            'IV':    ['ESOVPZJAYQUIRHXLNFTGKDCMWB', 0],
-            'V':     ['VZBRGITYUPSDNHLXAWMJQOFECK', 0],
-            'VI':    ['JPGVOUMFYQBENHZRDKASXLICTW', 0],
-            'VII':   ['NZJHGRCXMYSWBOUFAIVLPEKQDT', 0],
-            'VIII':  ['FKQHTLXOCBJSPDZRAMEWNIUYGV', 0],
-            'Reflector A': 'EJMZALYXVBWFCRQUONTSPIKHGD',
-            'Reflector B': 'YRUHQSLDPXNGOKMIEBFZCWVJAT',
-            'Reflector C': 'FVPJIAOYEDRZXWGCTKUQSBNMHL'
-        }
+        'Master':      'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        'I':          ['EKMFLGDQVZNTOWYHXUSPAIBRCJ', 0],
+        'II':         ['AJDKSIRUXBLHWTMCQGZNPYFVOE', 0],
+        'III':        ['BDFHJLCPRTXVZNYEIWGAKMUSQO', 0],
+        'IV':         ['ESOVPZJAYQUIRHXLNFTGKDCMWB', 0],
+        'V':          ['VZBRGITYUPSDNHLXAWMJQOFECK', 0],
+        'VI':         ['JPGVOUMFYQBENHZRDKASXLICTW', 0],
+        'VII':        ['NZJHGRCXMYSWBOUFAIVLPEKQDT', 0],
+        'VIII':       ['FKQHTLXOCBJSPDZRAMEWNIUYGV', 0],
+        'Reflector A': 'EJMZALYXVBWFCRQUONTSPIKHGD',
+        'Reflector B': 'YRUHQSLDPXNGOKMIEBFZCWVJAT',
+        'Reflector C': 'FVPJIAOYEDRZXWGCTKUQSBNMHL'
+    }
 
     def __init__(self, rotors: list, reflector: str, initial_rotor_settings: list, plug_board_connections: list = None):
         # Reference https://en.wikipedia.org/wiki/Enigma_rotor_details
-        
+
         self.initial_rotor_settings = initial_rotor_settings
         self.rotor_selection = rotors
         self.reflector_selection = reflector
@@ -43,6 +43,9 @@ class Enigma:
 
     def __str__(self):
         return str([rotor[0] for rotor in self.rotors])
+
+    def display(self):
+        return(f"Key: {Enigma.ROTOR_POOL['Master'][self.rotors[0][1]]} {Enigma.ROTOR_POOL['Master'][self.rotors[1][1]]} {Enigma.ROTOR_POOL['Master'][self.rotors[2][1]]}")
 
     def resetMachine(self):
         self.rotors = [Enigma.ROTOR_POOL[self.rotor_selection[0]],
@@ -58,7 +61,7 @@ class Enigma:
             if spin > 0:
                 self.rotors[rotor] = [self.rotors[rotor][0][spin:] + self.rotors[rotor][0][0:spin], spin]
 
-        print(f'Key: {self.rotors[0][0][0]} {self.rotors[1][0][0]} {self.rotors[2][0][0]}')
+        logging.info(self.display())
 
         self.reflector = Enigma.ROTOR_POOL[self.reflector_selection]
 
@@ -86,8 +89,9 @@ class Enigma:
 
         for i in range(iterations):
             for r, rotor in reversed(list(enumerate(self.rotors))):
-                logging.debug(f'Advancing rotor {r} from {rotor} to {[rotor[0][1:] + rotor[0][0], rotor[1] + 1]}')
+                logging.debug(f'Advancing rotor {r} from {rotor} to {[rotor[0][-1] + rotor[0][:-1], rotor[1] + 1]}')
                 rotor_copy = [rotor[0][1:] + rotor[0][0], rotor[1] + 1]
+                # rotor_copy = [rotor[0][-1] + rotor[0][:-1], rotor[1] + 1]
                 self.rotors[r] = rotor_copy
                 if self.rotors[r][1] % 26 == 0:
                     self.rotors[r][1] = 0
@@ -96,26 +100,30 @@ class Enigma:
                     break
 
     def encodeMessage(self, message):
-        message = message.upper()
-        message = message.replace(' ', 'X')
+        # message = message.upper()
+        # message = message.replace(' ', 'X')
         result = ''
 
         for c in message:
             self.advanceRotor()
+            logging.info(f'{self.display()}')
 
             # Run in through plug board
             encoded_value = self.plugBoard(c)
 
             # Go from right to left
-
+            logging.debug(f"       {Enigma.ROTOR_POOL['Master']}")
             for rotor in reversed(self.rotors):
+                logging.debug(f"{encoded_value} -> {rotor[0][Enigma.ROTOR_POOL['Master'].find(encoded_value)]} {rotor[0]}")
                 encoded_value = rotor[0][Enigma.ROTOR_POOL['Master'].find(encoded_value)]
 
             # Handle reflector
+            logging.debug(f"REFLECTOR: {encoded_value} -> {self.reflector[Enigma.ROTOR_POOL['Master'].find(encoded_value)]}")
             encoded_value = self.reflector[Enigma.ROTOR_POOL['Master'].find(encoded_value)]
 
             # Go from left to right
             for rotor in self.rotors:
+                logging.debug(f"{encoded_value} -> {Enigma.ROTOR_POOL['Master'][rotor[0].find(encoded_value)]} {rotor[0]}")
                 encoded_value = Enigma.ROTOR_POOL['Master'][rotor[0].find(encoded_value)]
 
             # Run out through plugboard
@@ -148,9 +156,18 @@ if __name__ == '__main__':
     # decoded = enigma.encodeMessage(original_message)
     # print(f'Decoded:  {decoded}')
     # print('Expected:', 'FEIND LIQEI NFANT ERIEK OLONN EBEOB AQTET XANFA NGSUE DAUSG ANGBA ERWAL DEXEN DEDRE IKMOS TWAER TSNEU STADT'.replace(' ', ''))
-    enigma = Enigma(rotors = ['I', 'II', 'III'], reflector='Reflector B', initial_rotor_settings=[20, 9, 6], plug_board_connections=None)
-    original_message = 'AAAAAAAAAA'
+    original_message = 'A' 
+    expected = 'B'  # 'DZGOWCXLY'
+    # for x in range(26):
+    #     for y in range(26):
+    #         for z in range(26):
+    #             enigma = None
+    #             enigma = Enigma(rotors=['I', 'II', 'III'], reflector='Reflector B', initial_rotor_settings=[x, y, z], plug_board_connections=None)
+    #             decoded = enigma.encodeMessage(message=original_message)
+    #             if decoded.startswith('CXT'):
+    #                 print(decoded)
+    #                 # print(expected)
+    enigma = Enigma(rotors=['I', 'II', 'III'], reflector='Reflector B', initial_rotor_settings=[25, 25, 25], plug_board_connections=None)
     decoded = enigma.encodeMessage(message=original_message)
-    expected = 'CXTGYJFLIN'
     print(decoded)
-    print(expected)
+    print('DZG' in decoded)
