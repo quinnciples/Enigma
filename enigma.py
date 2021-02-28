@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s.%(msecs)03d - %(levelname)8s - %(filename)s - Function: %(funcName)20s - Line: %(lineno)4s // %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     handlers=[
@@ -120,8 +120,8 @@ class Enigma:
                     break
 
     def encodeMessage(self, message):
-        # message = message.upper()
-        # message = message.replace(' ', 'X')
+        message = message.upper()
+        message = message.replace(' ', 'X')
         result = ''
 
         for c in message:
@@ -157,7 +157,6 @@ class Enigma:
                 rotor_output_index = (rotor_input_index + rotor_output_offset + 26) % 26
                 encoded_value = Enigma.ROTOR_POOL['Master'][rotor_output_index]
                 logging.debug(f"{input_letter} ({rotor_input_index}) + {rotor_output_offset} -> {encoded_value} ({rotor_output_index})")
-                
 
             # Run out through plugboard
             encoded_value = self.plugBoard(encoded_value)
@@ -168,38 +167,22 @@ class Enigma:
 
 
 if __name__ == '__main__':
-    # E = Enigma(rotors=['IV', 'VI', 'III'], initial_rotor_settings=[9, 6, 16], plug_board_connections=[('G', 'U'), ('D', 'E'), ('N', 'T'), ('A', 'V'), ('P', 'L'), ('Q', 'S'), ('K', 'J'), ('O', 'R'), ('W', 'M'), ('X', 'Z')])
-    # print('-=' * 40)
-    # print(E)
-    # print('-=' * 40)
-    # original_message = """Pack my box with five dozen liquor jugs Weather report things look slightly cloudy over here Hopefully the weather improves tomorrow"""
-    # encoded = E.encodeMessage(original_message)
-    # print('Message in:', original_message, 'Message out:', encoded)
-    # E.resetMachine()
-    # message = encoded
-    # encoded = E.encodeMessage(encoded)
-    # print('Message in:', message, 'Message out:', encoded, encoded == original_message.strip().upper().replace(' ', 'X'))
-    # print('-=' * 40)
-    # print(E)
-    # print('-=' * 40)
-    # original_message = 'GCDSE AHUGW TQGRK VLFGX UCALX VYMIG MMNMF DXTGN VHVRM MEVOU YFZSL RHDRR XFJWC FHUHM UNZEF RDISI KBGPM YVXUZ'.replace(' ', '')
-    # E = None
-    # print(f'Encoded:  {original_message}')
-    # enigma = Enigma(rotors=['II', 'I', 'III'], initial_rotor_settings=[24, 13, 22], plug_board_connections=[('A', 'M'), ('F', 'I'), ('N', 'V'), ('P', 'S'), ('T', 'U'), ('W', 'Z')])
-    # decoded = enigma.encodeMessage(original_message)
-    # print(f'Decoded:  {decoded}')
-    # print('Expected:', 'FEIND LIQEI NFANT ERIEK OLONN EBEOB AQTET XANFA NGSUE DAUSG ANGBA ERWAL DEXEN DEDRE IKMOS TWAER TSNEU STADT'.replace(' ', ''))
     original_message = 'GAAAAA'
     expected = 'P'  # 'BDZGO'  # 'DZGOWCXLY'
-    # for x in range(26):
-    #     for y in range(26):
-    #         for z in range(26):
-    #             enigma = None
-    #             enigma = Enigma(rotors=['I', 'II', 'III'], reflector='Reflector B', initial_rotor_settings=[x, y, z], plug_board_connections=None)
-    #             decoded = enigma.encodeMessage(message=original_message)
-    #             if decoded.startswith('CXT'):
-    #                 print(decoded)
-    #                 # print(expected)
     enigma = Enigma(rotors=['I', 'II', 'III'], reflector='Reflector B', initial_rotor_settings=[25, 25, 25], plug_board_connections=None)
     decoded = enigma.encodeMessage(message=original_message)
     print(decoded)
+
+    # picard_message = 'ONE SEVEN THREE FOUR SIX SEVEN THREE TWO ONE FOUR SEVEN SIX CHARLIE THREE TWO SEVEN EIGHT NINE SEVEN SEVEN SEVEN SIX FOUR THREE TANGO SEVEN THREE TWO VICTOR SEVEN THREE ONE ONE SEVEN EIGHT EIGHT SEVEN THREE TWO FOUR SEVEN SIX SEVEN EIGHT NINE SEVEN SIX FOUR THREE SEVEN SIX'
+    # enigma = None
+    # enigma = Enigma(rotors=['I', 'II', 'III'], reflector='Reflector B', initial_rotor_settings=[4, 7, 6], plug_board_connections=None)
+    # encoded = enigma.encodeMessage(message=picard_message)
+    # print(encoded)
+    # enigma.resetMachine()
+    # # enigma = Enigma(rotors=['I', 'II', 'III'], reflector='Reflector B', initial_rotor_settings=[4, 7, 6], plug_board_connections=None)
+    # decoded = enigma.encodeMessage(message=encoded)
+    # print(decoded)
+
+    # block_size = 5
+    # blocks = [encoded[start:start + block_size] for start in range(0, len(decoded), block_size)]
+    # print(' '.join(blocks))
