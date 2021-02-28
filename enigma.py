@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s.%(msecs)03d - %(levelname)8s - %(filename)s - Function: %(funcName)20s - Line: %(lineno)4s // %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     handlers=[
@@ -11,7 +11,8 @@ logging.info('Loaded.')
 
 
 class Enigma:
-    """DOC STRING"""
+    """Is it as simple as saying B -> D is the same as B -> B + 2? Rotor III example using A input on AAB.
+    Just switch the 'rotors' to relative references (numbers)?"""
 
     ROTOR_POOL = {
         'Master':      'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -35,15 +36,35 @@ class Enigma:
         # https://www.101computing.net/enigma-encoder/
         # https://www.101computing.net/enigma/js/index.js
 
+        self.plugs = {}
+        self.rotor_offsets = []
+
         self.initial_rotor_settings = initial_rotor_settings
         self.rotor_selection = rotors
         self.reflector_selection = reflector
-        self.plugs = {}
+
         if plug_board_connections:
             for connection in plug_board_connections:
                 char_in, char_out = connection
                 self.add_plug_board_connection(key_in=char_in, key_out=char_out)
         self.resetMachine()
+
+    def convert_rotors_to_offsets(self):
+        self.rotor_offsets.clear()
+        for rotor in self.rotor_selection:
+            rotor_offset = [{'LR': 0, 'RL': 0} for _ in range(26)]
+            for input_sequence, output_sequence in zip(Enigma.ROTOR_POOL['Master'], Enigma.ROTOR_POOL[rotor][0]):
+                for input_position, output_position in zip(input_sequence, output_sequence):
+                    rl_key = ord(input_position) - 65
+                    lr_key = ord(output_position) - 65
+                    rl_shift = ord(output_position) - ord(input_position)
+                    lr_shift = -rl_shift
+                    rotor_offset[rl_key]['RL'] = rl_shift
+                    rotor_offset[lr_key]['LR'] = lr_shift
+
+            logging.debug(f"{Enigma.ROTOR_POOL['Master']} -> {Enigma.ROTOR_POOL[rotor][0]} converted to {rotor_offset}")
+            self.rotor_offsets.append([rotor_offset, 0])
+        logging.debug(f"ROTOR OFFSETS: {self.rotor_offsets}")
 
     def __str__(self):
         return str([rotor[0] for rotor in self.rotors])
@@ -52,20 +73,17 @@ class Enigma:
         return(f"Key: {Enigma.ROTOR_POOL['Master'][self.rotors[0][1]]} {Enigma.ROTOR_POOL['Master'][self.rotors[1][1]]} {Enigma.ROTOR_POOL['Master'][self.rotors[2][1]]}")
 
     def resetMachine(self):
-        self.rotors = [Enigma.ROTOR_POOL[self.rotor_selection[0]],
-                       Enigma.ROTOR_POOL[self.rotor_selection[1]],
-                       Enigma.ROTOR_POOL[self.rotor_selection[2]]]
-
-        # self.advanceRotor(self.initial_rotor_settings[2])
-        # self.advanceRotor(self.initial_rotor_settings[1] * 26)
-        # self.advanceRotor(self.initial_rotor_settings[0] * 26 * 26)
+        self.convert_rotors_to_offsets()
+        self.rotors = [rotor for rotor in self.rotor_offsets]
+        print(self.rotors)
 
         for spin, rotor in zip(self.initial_rotor_settings, range(3)):
             spin = spin % 26
             if spin > 0:
                 self.rotors[rotor] = [self.rotors[rotor][0][spin:] + self.rotors[rotor][0][0:spin], spin]
 
-        logging.info(self.display())
+        logging.debug(f'Initial rotor settings: {self.rotors}')
+        logging.info(f'{self.display()}')
 
         self.reflector = Enigma.ROTOR_POOL[self.reflector_selection]
 
@@ -93,10 +111,8 @@ class Enigma:
 
         for i in range(iterations):
             for r, rotor in reversed(list(enumerate(self.rotors))):
-                logging.debug(f'Advancing rotor {r} from {rotor} to {[rotor[0][1:] + rotor[0][0], rotor[1] + 1]}')
-                rotor_copy = [rotor[0][1:] + rotor[0][0], rotor[1] + 1]
-                # rotor_copy = [rotor[0][-1] + rotor[0][:-1], rotor[1] + 1]
-                self.rotors[r] = rotor_copy
+                logging.debug(f'Advancing rotor {r} from {rotor} to {[rotor[0][1:] + rotor[0][:1], (rotor[1] + 1) % 26]}')
+                self.rotors[r] = [rotor[0][1:] + rotor[0][:1], (rotor[1] + 1) % 26]
                 if self.rotors[r][1] % 26 == 0:
                     self.rotors[r][1] = 0
                     logging.debug('Advancing next rotor')
@@ -121,9 +137,10 @@ class Enigma:
                 # Take the INDEX from the Master and look up the corresponding LETTER in the rotor
                 input_letter = encoded_value
                 rotor_input_index = Enigma.ROTOR_POOL['Master'].find(input_letter)
-                encoded_value = rotor[0][rotor_input_index]
-                rotor_output_index = Enigma.ROTOR_POOL['Master'].find(encoded_value)
-                logging.debug(f"{input_letter} ({rotor_input_index}) -> {encoded_value} ({rotor_output_index}) {rotor[0]}")
+                rotor_output_offset = rotor[0][rotor_input_index]['RL']
+                rotor_output_index = (rotor_input_index + rotor_output_offset + 26) % 26
+                encoded_value = Enigma.ROTOR_POOL['Master'][rotor_output_index]
+                logging.debug(f"{input_letter} ({rotor_input_index}) + {rotor_output_offset} -> {encoded_value} ({rotor_output_index})")
 
             # Handle reflector
             input_letter = encoded_value
@@ -134,8 +151,13 @@ class Enigma:
 
             # Go from left to right
             for rotor in self.rotors:
-                logging.debug(f"{encoded_value} -> {Enigma.ROTOR_POOL['Master'][rotor[0].find(encoded_value)]} {rotor[0]}")
-                encoded_value = Enigma.ROTOR_POOL['Master'][rotor[0].find(encoded_value)]
+                input_letter = encoded_value
+                rotor_input_index = Enigma.ROTOR_POOL['Master'].find(encoded_value)
+                rotor_output_offset = rotor[0][rotor_input_index]['LR']
+                rotor_output_index = (rotor_input_index + rotor_output_offset + 26) % 26
+                encoded_value = Enigma.ROTOR_POOL['Master'][rotor_output_index]
+                logging.debug(f"{input_letter} ({rotor_input_index}) + {rotor_output_offset} -> {encoded_value} ({rotor_output_index})")
+                
 
             # Run out through plugboard
             encoded_value = self.plugBoard(encoded_value)
@@ -167,7 +189,7 @@ if __name__ == '__main__':
     # decoded = enigma.encodeMessage(original_message)
     # print(f'Decoded:  {decoded}')
     # print('Expected:', 'FEIND LIQEI NFANT ERIEK OLONN EBEOB AQTET XANFA NGSUE DAUSG ANGBA ERWAL DEXEN DEDRE IKMOS TWAER TSNEU STADT'.replace(' ', ''))
-    original_message = 'G'
+    original_message = 'GAAAAA'
     expected = 'P'  # 'BDZGO'  # 'DZGOWCXLY'
     # for x in range(26):
     #     for y in range(26):
