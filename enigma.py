@@ -16,14 +16,14 @@ class Enigma:
 
     ROTOR_POOL = {
         'Master':      'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        'I':          ['EKMFLGDQVZNTOWYHXUSPAIBRCJ', 0],
-        'II':         ['AJDKSIRUXBLHWTMCQGZNPYFVOE', 0],
-        'III':        ['BDFHJLCPRTXVZNYEIWGAKMUSQO', 0],
-        'IV':         ['ESOVPZJAYQUIRHXLNFTGKDCMWB', 0],
-        'V':          ['VZBRGITYUPSDNHLXAWMJQOFECK', 0],
-        'VI':         ['JPGVOUMFYQBENHZRDKASXLICTW', 0],
-        'VII':        ['NZJHGRCXMYSWBOUFAIVLPEKQDT', 0],
-        'VIII':       ['FKQHTLXOCBJSPDZRAMEWNIUYGV', 0],
+        'I':           'EKMFLGDQVZNTOWYHXUSPAIBRCJ',
+        'II':          'AJDKSIRUXBLHWTMCQGZNPYFVOE',
+        'III':         'BDFHJLCPRTXVZNYEIWGAKMUSQO',
+        'IV':          'ESOVPZJAYQUIRHXLNFTGKDCMWB',
+        'V':           'VZBRGITYUPSDNHLXAWMJQOFECK',
+        'VI':          'JPGVOUMFYQBENHZRDKASXLICTW',
+        'VII':         'NZJHGRCXMYSWBOUFAIVLPEKQDT',
+        'VIII':        'FKQHTLXOCBJSPDZRAMEWNIUYGV',
         'Reflector A': 'EJMZALYXVBWFCRQUONTSPIKHGD',
         'Reflector B': 'YRUHQSLDPXNGOKMIEBFZCWVJAT',
         'Reflector C': 'FVPJIAOYEDRZXWGCTKUQSBNMHL'
@@ -50,10 +50,19 @@ class Enigma:
         self.resetMachine()
 
     def convert_rotors_to_offsets(self):
+        """Converts the initial rotor positions which are stored as alphabet characters into relative offsets.
+        Doing so makes handling rotor rotation easier, since the stored offsets are relative positions
+        between input and output.
+        EXAMPLE: An input of A (0) yielding an output of E (4) would be a relative offset of +4.
+                    The RL (right-to-left) key of position 0 in the array would store +4.
+                    The complementary position of 4 in the array would store -4 in the LR (left-to-right) key.
+                    This is essentially connecting pin 0 on the right side of the rotor to pin 4 on the left side.
+                 An input of X yielding an output of C would be a relative offset of -21.
+        """
         self.rotor_offsets.clear()
         for rotor in self.rotor_selection:
             rotor_offset = [{'LR': 0, 'RL': 0} for _ in range(26)]
-            for input_sequence, output_sequence in zip(Enigma.ROTOR_POOL['Master'], Enigma.ROTOR_POOL[rotor][0]):
+            for input_sequence, output_sequence in zip(Enigma.ROTOR_POOL['Master'], Enigma.ROTOR_POOL[rotor]):
                 for input_position, output_position in zip(input_sequence, output_sequence):
                     rl_key = ord(input_position) - 65
                     lr_key = ord(output_position) - 65
@@ -62,7 +71,7 @@ class Enigma:
                     rotor_offset[rl_key]['RL'] = rl_shift
                     rotor_offset[lr_key]['LR'] = lr_shift
 
-            logging.debug(f"{Enigma.ROTOR_POOL['Master']} -> {Enigma.ROTOR_POOL[rotor][0]} converted to {rotor_offset}")
+            logging.debug(f"{Enigma.ROTOR_POOL['Master']} -> {Enigma.ROTOR_POOL[rotor]} converted to {rotor_offset}")
             self.rotor_offsets.append([rotor_offset, 0])
         logging.debug(f"ROTOR OFFSETS: {self.rotor_offsets}")
 
