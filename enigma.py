@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s.%(msecs)03d - %(levelname)8s - %(filename)s - Function: %(funcName)20s - Line: %(lineno)4s // %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     handlers=[
@@ -220,3 +220,10 @@ if __name__ == '__main__':
     # block_size = 5
     # blocks = [encoded[start:start + block_size] for start in range(0, len(decoded), block_size)]
     # print(' '.join(blocks))
+
+    original_message = "GCDSE AHUGW TQGRK VLFGX UCALX VYMIG MMNMF DXTGN VHVRM MEVOU YFZSL RHDRR XFJWC FHUHM UNZEF RDISI KBGPM YVXUZ"
+    original_message = original_message.replace(' ','')
+    enigma = None
+    enigma = Enigma(rotors=['II', 'I', 'III'], reflector='Reflector A', initial_rotor_settings=[23, 12, 21], plug_board_connections=[('A', 'M'), ('F', 'I'), ('N', 'V'), ('P', 'S'), ('T', 'U'), ('W', 'Z')])
+    decoded = enigma.encodeMessage(message=original_message)
+    print(decoded)
