@@ -3,7 +3,7 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s.%(msecs)03d - %(levelname)8s - %(filename)s - Function: %(funcName)20s - Line: %(lineno)4s // %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     handlers=[
-                        # logging.FileHandler(filename='log.txt'),
+                        logging.FileHandler(filename='log.txt'),
                         logging.StreamHandler()
                     ])
 # logging.disable(level=logging.CRITICAL)
@@ -15,15 +15,15 @@ class Enigma:
     Just switch the 'rotors' to relative references (numbers)?"""
 
     ROTOR_POOL = {
-        'Master':      'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        'I':           'EKMFLGDQVZNTOWYHXUSPAIBRCJ',
-        'II':          'AJDKSIRUXBLHWTMCQGZNPYFVOE',
-        'III':         'BDFHJLCPRTXVZNYEIWGAKMUSQO',
-        'IV':          'ESOVPZJAYQUIRHXLNFTGKDCMWB',
-        'V':           'VZBRGITYUPSDNHLXAWMJQOFECK',
-        'VI':          'JPGVOUMFYQBENHZRDKASXLICTW',
-        'VII':         'NZJHGRCXMYSWBOUFAIVLPEKQDT',
-        'VIII':        'FKQHTLXOCBJSPDZRAMEWNIUYGV',
+        'Master': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        'I': 'EKMFLGDQVZNTOWYHXUSPAIBRCJ',
+        'II': 'AJDKSIRUXBLHWTMCQGZNPYFVOE',
+        'III': 'BDFHJLCPRTXVZNYEIWGAKMUSQO',
+        'IV': 'ESOVPZJAYQUIRHXLNFTGKDCMWB',
+        'V': 'VZBRGITYUPSDNHLXAWMJQOFECK',
+        'VI': 'JPGVOUMFYQBENHZRDKASXLICTW',
+        'VII': 'NZJHGRCXMYSWBOUFAIVLPEKQDT',
+        'VIII': 'FKQHTLXOCBJSPDZRAMEWNIUYGV',
         'Reflector A': 'EJMZALYXVBWFCRQUONTSPIKHGD',
         'Reflector B': 'YRUHQSLDPXNGOKMIEBFZCWVJAT',
         'Reflector C': 'FVPJIAOYEDRZXWGCTKUQSBNMHL'
@@ -37,31 +37,45 @@ class Enigma:
         # https://www.101computing.net/enigma/js/index.js
 
         self.plugs = {}
-        self.rotor_offsets = []
+        self.plug_board_connections = plug_board_connections
 
+        self.rotor_offsets = []
         self.initial_rotor_settings = initial_rotor_settings
         self.rotor_selection = rotors
         self.reflector_selection = reflector
 
-        if plug_board_connections:
-            for connection in plug_board_connections:
+        self.reset_machine()
+
+    def initialize_plugboard_connections(self):
+        self.plugs.clear()
+        if self.plug_board_connections:
+            for connection in self.plug_board_connections:
                 char_in, char_out = connection
                 self.add_plug_board_connection(key_in=char_in, key_out=char_out)
-        self.resetMachine()
+        pass
 
     def convert_rotors_to_offsets(self):
         """Converts the initial rotor positions which are stored as alphabet characters into relative offsets.
         Doing so makes handling rotor rotation easier, since the stored offsets are relative positions
         between input and output.
-        EXAMPLE: An input of A (0) yielding an output of E (4) would be a relative offset of +4.
+        EXAMPLE:    An input of A (0) yielding an output of E (4) would be a relative offset of +4.
                     The RL (right-to-left) key of position 0 in the array would store +4.
                     The complementary position of 4 in the array would store -4 in the LR (left-to-right) key.
                     This is essentially connecting pin 0 on the right side of the rotor to pin 4 on the left side.
-                 An input of X yielding an output of C would be a relative offset of -21.
+
+                 After rotation of one 'notch,' the contents of position 0 in the array are shifted to 25.
+                 This is because the rotor is rotating from the A position to the Z position. The offsets
+                 related to the A position now belong to the Z position, so the above example woud yield
+                 different results.
+
+                 If a Z (25) is sent to the right-side of the rotor, the offset of +4 (wrapped around 25),
+                 would cause the output to be D (3). Likewise, if a signal was sent from the left-side of the rotor
+                 on pin 3, the offset of -4 (wrapped around 0 with a scale of 25) would sent the output
+                 from pin 25.
         """
         self.rotor_offsets.clear()
         for rotor in self.rotor_selection:
-            rotor_offset = [{'LR': 0, 'RL': 0} for _ in range(26)]
+            rotor_offset = [{'INDEX': index, 'DISPLAY': Enigma.ROTOR_POOL['Master'][index], 'LR': 0, 'RL': 0} for index in range(26)]
             for input_sequence, output_sequence in zip(Enigma.ROTOR_POOL['Master'], Enigma.ROTOR_POOL[rotor]):
                 for input_position, output_position in zip(input_sequence, output_sequence):
                     rl_key = ord(input_position) - 65
@@ -76,15 +90,16 @@ class Enigma:
         logging.debug(f"ROTOR OFFSETS: {self.rotor_offsets}")
 
     def __str__(self):
-        return str([rotor[0] for rotor in self.rotors])
+        return str([rotor for rotor in self.rotors])
 
     def display(self):
-        return(f"Key: {Enigma.ROTOR_POOL['Master'][self.rotors[0][1]]} {Enigma.ROTOR_POOL['Master'][self.rotors[1][1]]} {Enigma.ROTOR_POOL['Master'][self.rotors[2][1]]}")
+        # return(f"Key: {Enigma.ROTOR_POOL['Master'][self.rotors[0][0][0]['INDEX']]} {Enigma.ROTOR_POOL['Master'][self.rotors[1][0][0]['INDEX']]} {Enigma.ROTOR_POOL['Master'][self.rotors[2][0][0]['INDEX']]}")
+        return(f"{self.rotors[0][0][0]['DISPLAY']} {self.rotors[1][0][0]['DISPLAY']} {self.rotors[2][0][0]['DISPLAY']}")
 
-    def resetMachine(self):
+    def reset_machine(self):
+        self.initialize_plugboard_connections()
         self.convert_rotors_to_offsets()
         self.rotors = [rotor for rotor in self.rotor_offsets]
-        print(self.rotors)
 
         for spin, rotor in zip(self.initial_rotor_settings, range(3)):
             spin = spin % 26
@@ -92,7 +107,7 @@ class Enigma:
                 self.rotors[rotor] = [self.rotors[rotor][0][spin:] + self.rotors[rotor][0][0:spin], spin]
 
         logging.debug(f'Initial rotor settings: {self.rotors}')
-        logging.info(f'{self.display()}')
+        logging.info(f'Key: {self.display()}')
 
         self.reflector = Enigma.ROTOR_POOL[self.reflector_selection]
 
@@ -117,8 +132,13 @@ class Enigma:
         return self.plugs.get(key_in, key_in)
 
     def advanceRotor(self, iterations=1):
+        """Models the rotation of the rotors in the machine.
+        EXAMPLE:    A rotor that starts in position ABCDE would rotate to BCDEA
 
-        for i in range(iterations):
+        Rotors have key position which will cause the rotor on their left to also rotate a position.
+        """
+
+        for _ in range(iterations):
             for r, rotor in reversed(list(enumerate(self.rotors))):
                 logging.debug(f'Advancing rotor {r} from {rotor} to {[rotor[0][1:] + rotor[0][:1], (rotor[1] + 1) % 26]}')
                 self.rotors[r] = [rotor[0][1:] + rotor[0][:1], (rotor[1] + 1) % 26]
@@ -128,9 +148,14 @@ class Enigma:
                 else:
                     break
 
-    def encodeMessage(self, message):
+    @staticmethod
+    def prepare_message(message):
         message = message.upper()
         message = message.replace(' ', 'X')
+        return message
+
+    def encodeMessage(self, message):
+        message = Enigma.prepare_message(message)
         result = ''
 
         for c in message:
